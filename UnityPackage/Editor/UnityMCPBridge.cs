@@ -81,10 +81,17 @@ namespace UnityMCP.Editor
             if ((IsRunning && !threadDead) || now < _nextRetryTime) return;
             if (_startFailures >= 8)
             {
-                _gaveUp = true;
-                Debug.LogError("[UnityMCP] Giving up auto-restart after 8 failed attempts. " +
-                    "The port is likely held by a zombie listener in this process — restart the Unity Editor. " +
-                    "Press Start in Window > Unity MCP to retry manually.");
+                // Don't spam: back off to one attempt per 5 minutes instead of giving up forever
+                // (a duplicate Editor holding the port may simply need time to exit).
+                if (!_gaveUp)
+                {
+                    _gaveUp = true;
+                    Debug.LogError("[UnityMCP] Auto-restart backing off after 8 failed attempts. " +
+                        "The port may be held by another Unity process — close duplicate Editors. " +
+                        "Will retry automatically; or press Start in Window > Unity MCP.");
+                }
+                _nextRetryTime = now + 300.0;
+                _startFailures = 0;
                 return;
             }
             Debug.Log("[UnityMCP] Watchdog: listener/thread dead, restarting.");

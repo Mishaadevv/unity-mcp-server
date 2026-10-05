@@ -12,8 +12,10 @@ All notable changes to `unity-mcp-server` and the Unity Editor bridge package
 - `Samples~/SelfPlayGlue/MCPGameGlue.cs` documents `RegisterHandler`.
 
 ### Fixed
-- Watchdog backoff + give-up after 8 failed starts (no console spam).
+- Watchdog backoff; after 8 failures retries every 5 min instead of giving up
+  forever (survives restart overlaps where the old process still holds the port).
 - Suppressed benign `UAC0007` analyzer warning in code-exec references.
+- `Stop()` uses `Abort()` so dead listener threads can't leave zombie sockets.
 
 ## [0.1.1] - 2026-10-05
 
