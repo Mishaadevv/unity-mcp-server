@@ -9,26 +9,11 @@ Obj/
 *.csproj
 *.sln
 # local throwaway helpers
-_rpc.py
-_check*.py
-_err*.py
-_rig.py
-_tank*.py
-_tpc*.py
-_tpc*.txt
+_*.py
+_*.txt
 _p_*.json
 _cl.txt
 smoke*.mjs
-_playtest*.py
-_drift.py
-_tele.py
-_visual.py
-_stack.py
-_errors.py
-_combat.py
-_import.py
-_check2.py
-_err2.py
 
 # Unity import artifacts
 *.meta
