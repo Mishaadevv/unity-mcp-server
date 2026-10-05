@@ -132,7 +132,9 @@ namespace UnityMCP.Editor
 
         private static void StopListenerLocked()
         {
-            try { _listener?.Stop(); } catch { /* already stopped */ }
+            // Abort (not just Stop): drops queued requests and releases the
+            // socket even if the listener thread is already dead (zombie socket).
+            try { _listener?.Abort(); } catch { /* already dead */ }
             try { _listener?.Close(); } catch { /* ignore */ }
             _listener = null;
             ClearPortFile();
