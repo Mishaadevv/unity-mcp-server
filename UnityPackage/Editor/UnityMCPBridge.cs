@@ -104,10 +104,7 @@ namespace UnityMCP.Editor
                 _listener = null;
                 try
                 {
-                    int port = ResolvePort();
-                    _listener = new HttpListener();
-                    _listener.Prefixes.Add($"http://127.0.0.1:{port}/rpc/");
-                    _listener.Start();
+                    int port = BindFirstFree(); // sets _listener on success
                     ActivePort = port;
                     WritePortFile(port);
                     _thread = new Thread(ListenLoop) { IsBackground = true, Name = "UnityMCP-Bridge" };
@@ -123,7 +120,7 @@ namespace UnityMCP.Editor
                     _listener = null;
                     ActivePort = 0;
                     _startFailures++;
-                    Debug.LogError($"[UnityMCP] Failed to start on port {Port} (attempt {_startFailures}): {ex.Message}. Change port in Window > Unity MCP.");
+                    Debug.LogError($"[UnityMCP] Failed to start (preferred port {Port}, attempt {_startFailures}): {ex.Message}. Change port in Window > Unity MCP.");
                 }
             }
         }
@@ -147,26 +144,33 @@ namespace UnityMCP.Editor
             Start();
         }
 
-        // Many ports, not one: try the preferred port, then scan upward.
-        private static int ResolvePort()
+        // Many ports, not one: bind the preferred port, else scan upward.
+        // Binds directly in one step (no probe-then-bind race with http.sys).
+        private static int BindFirstFree()
         {
             int preferred = Port;
+            Exception lastError = null;
             for (int p = preferred; p < preferred + 100; p++)
             {
-                var probe = new HttpListener();
+                var candidate = new HttpListener();
                 try
                 {
-                    probe.Prefixes.Add($"http://127.0.0.1:{p}/rpc/");
-                    probe.Start();
-                    probe.Stop();
-                    probe.Close();
+                    candidate.Prefixes.Add($"http://127.0.0.1:{p}/rpc/");
+                    candidate.Start();
+                    // Success: retire the previous listener, keep the new one.
+                    try { _listener?.Close(); } catch { /* ignore */ }
+                    _listener = candidate;
                     return p;
                 }
-                catch (HttpListenerException) { /* busy, try next */ }
-                finally { try { probe.Close(); } catch { /* ignore */ } }
+                catch (HttpListenerException ex)
+                {
+                    lastError = ex;
+                    try { candidate.Close(); } catch { /* ignore */ }
+                }
             }
             throw new InvalidOperationException(
-                $"No free port in {preferred}..{preferred + 99}. Close duplicate Unity Editors and retry.");
+                $"No free port in {preferred}..{preferred + 99} (last error: {lastError?.Message}). " +
+                "A zombie listener in this Editor may hold the port — restart Unity if this persists.");
         }
 
         private static void WritePortFile(int port)
