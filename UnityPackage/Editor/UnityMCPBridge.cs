@@ -15,7 +15,7 @@ using UnityEngine;
 namespace UnityMCP.Editor
 {
     [InitializeOnLoad]
-    internal static class UnityMCPBridge
+    public static class UnityMCPBridge
     {
         public const string Version = "0.1.0";
         private static HttpListener _listener;
@@ -29,6 +29,20 @@ namespace UnityMCP.Editor
         {
             get => EditorPrefs.GetBool("UnityMCP.Mutations", true);
             set => EditorPrefs.SetBool("UnityMCP.Mutations", value);
+        }
+
+        // Game-specific extensions. UPM packages cannot reference project code,
+        // so games register their own methods here (see Samples~/SelfPlayGlue).
+        private static readonly Dictionary<string, Func<JObject, object>> CustomHandlers = new();
+
+        public static void RegisterHandler(string method, Func<JObject, object> handler)
+        {
+            lock (StateLock) { CustomHandlers[method] = handler; }
+        }
+
+        public static bool UnregisterHandler(string method)
+        {
+            lock (StateLock) { return CustomHandlers.Remove(method); }
         }
 
         private static bool _userStopped;
@@ -203,6 +217,11 @@ namespace UnityMCP.Editor
 
         private static object Dispatch(string method, JObject p)
         {
+            // Project-registered handlers win over built-ins.
+            Func<JObject, object> custom;
+            lock (StateLock) { CustomHandlers.TryGetValue(method, out custom); }
+            if (custom != null) return custom(p);
+
             switch (method)
             {
                 case "ping":
@@ -374,27 +393,8 @@ namespace UnityMCP.Editor
                     AssetDatabase.Refresh();
                     return new Dictionary<string, object> { ["refreshed"] = true };
 
-                case "input/set":
-                    RequireMutations();
-                    TankMCPInput.Set(
-                        ToFloat(p["throttle"], 0f),
-                        ToFloat(p["steer"], 0f),
-                        p["fire"]?.ToObject<bool>() ?? false);
-                    return new Dictionary<string, object>
-                    {
-                        ["override"] = true,
-                        ["throttle"] = TankMCPInput.throttle,
-                        ["steer"] = TankMCPInput.steer,
-                    };
-                case "input/clear":
-                    TankMCPInput.Clear();
-                    return new Dictionary<string, object> { ["override"] = false };
-
-                case "game/state":
-                    return GameState();
-
                 default:
-                    throw new ArgumentException($"Unknown method '{method}'. Available: ping, project/info, scene/*, object/*, console/*, playmode/*, script/*, asset/*, prefab/*.");
+                    throw new ArgumentException($"Unknown method '{method}'. Available: ping, project/info, scene/*, object/*, console/*, playmode/*, script/*, asset/*, prefab/*, code/* + project-registered handlers.");
             }
         }
 
@@ -434,41 +434,6 @@ namespace UnityMCP.Editor
             var v = p[key]?.ToObject<string>();
             if (string.IsNullOrEmpty(v)) throw new ArgumentException($"'{key}' is required.");
             return v;
-        }
-
-        private static float ToFloat(JToken t, float fallback)
-        {
-            if (t == null || t.Type == JTokenType.Null) return fallback;
-            return t.ToObject<float>();
-        }
-
-        // One-call snapshot for AI self-play: every tank's team/HP/pose/gun state.
-        private static object GameState()
-        {
-            var tanks = new List<object>();
-            foreach (var th in TankHealth.all)
-            {
-                if (th == null) continue;
-                var t = th.transform;
-                float reload = 1f, turretYaw = t.eulerAngles.y;
-                var pc = th.GetComponent<TankController>();
-                var ai = th.GetComponent<TankAI>();
-                if (pc != null) { reload = pc.ReloadFrac(); turretYaw = pc.TurretYaw(); }
-                else if (ai != null) { reload = ai.ReloadFrac(); turretYaw = ai.TurretYaw(); }
-                tanks.Add(new Dictionary<string, object>
-                {
-                    ["name"] = th.name,
-                    ["team"] = th.team,
-                    ["hp"] = th.hp,
-                    ["maxHP"] = th.maxHP,
-                    ["alive"] = th.Alive,
-                    ["position"] = new[] { t.position.x, t.position.y, t.position.z },
-                    ["yaw"] = t.eulerAngles.y,
-                    ["turretYaw"] = turretYaw,
-                    ["reloadFrac"] = reload,
-                });
-            }
-            return new Dictionary<string, object> { ["tanks"] = tanks };
         }
 
         private static float[] Arr(JObject p, string key, float[] fallback)

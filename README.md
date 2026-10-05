@@ -103,6 +103,24 @@ Verify: ask the agent *"Ping Unity and summarize the active scene"*.
 
 Code rules: bare statements in a static `Run()` (`return` sends JSON back); blocklist covers filesystem/network/process/reflection-load/`Application.Quit`/infinite-loop patterns. Requires mutations ON **and** `Enable C# execution` in `Window > Unity MCP` (off by default).
 
+### Game-specific extensions (custom methods)
+
+The bridge package is game-agnostic by design (UPM packages cannot reference
+project code). Games expose their own methods at runtime:
+
+```csharp
+UnityMCPBridge.RegisterHandler("game/state", _ => new Dictionary<string, object> {
+    ["tanks"] = ...,
+});
+```
+
+See `UnityPackage/Samples~/SelfPlayGlue/MCPGameGlue.cs` for a complete sample
+(`input/set`, `input/clear`, `game/state` for AI self-play). Copy it into your
+project's `Assets/Editor/` and adapt to your game classes. The matching client
+tools are `unity_set_player_input`, `unity_clear_player_input`,
+`unity_get_game_state` (they report a clear error until the glue registers
+the methods).
+
 ### AI self-play + background (4)
 
 | Tool | Type | Description |

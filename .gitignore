@@ -29,3 +29,6 @@ _combat.py
 _import.py
 _check2.py
 _err2.py
+
+# Unity import artifacts
+*.meta
