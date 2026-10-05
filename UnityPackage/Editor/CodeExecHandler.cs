@@ -224,6 +224,7 @@ namespace UnityMCP.Editor
                 $"public static class __MCPJob_{id}\n{{\n    public static object Run()\n    {{\n{code}\n        return null;\n    }}\n}}\n";
         }
 
+#pragma warning disable UAC0007 // Assembly.Location guarded below (IsNullOrEmpty + File.Exists)
         private static string[] DefaultReferences()
         {
             var refs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -243,6 +244,7 @@ namespace UnityMCP.Editor
             Add(typeof(JToken).Assembly);              // Newtonsoft.Json
             return refs.ToArray();
         }
+#pragma warning restore UAC0007
 
         private sealed class CodeJob
         {

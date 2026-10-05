@@ -25,6 +25,9 @@ namespace UnityMCP.Editor
 
         public static bool IsRunning => _listener != null && _listener.IsListening;
         public static int Port => EditorPrefs.GetInt("UnityMCP.Port", 6400);
+        public static int ActivePort { get; private set; }
+        public static string PortFilePath =>
+            Path.Combine(Path.GetTempPath(), "unity-mcp-bridge.port");
         public static bool MutationsEnabled
         {
             get => EditorPrefs.GetBool("UnityMCP.Mutations", true);
@@ -62,8 +65,7 @@ namespace UnityMCP.Editor
 
         private static void OnBeforeReload()
         {
-            _userStopped = false; // reload stop is not a user stop
-            Stop();
+            lock (StateLock) { _userStopped = false; StopListenerLocked(); }
         }
 
         // Self-heal: if the listener or its thread died (domain reload races,
@@ -102,20 +104,24 @@ namespace UnityMCP.Editor
                 _listener = null;
                 try
                 {
+                    int port = ResolvePort();
                     _listener = new HttpListener();
-                    _listener.Prefixes.Add($"http://127.0.0.1:{Port}/rpc/");
+                    _listener.Prefixes.Add($"http://127.0.0.1:{port}/rpc/");
                     _listener.Start();
+                    ActivePort = port;
+                    WritePortFile(port);
                     _thread = new Thread(ListenLoop) { IsBackground = true, Name = "UnityMCP-Bridge" };
                     _thread.Start();
                     _startFailures = 0;
                     _gaveUp = false;
                     _nextRetryTime = 0;
-                    Debug.Log($"[UnityMCP] Bridge running on http://127.0.0.1:{Port}/rpc/ (v{Version})");
+                    Debug.Log($"[UnityMCP] Bridge running on http://127.0.0.1:{ActivePort}/rpc/ (v{Version})");
                 }
                 catch (Exception ex)
                 {
                     try { _listener?.Close(); } catch { /* ignore */ }
                     _listener = null;
+                    ActivePort = 0;
                     _startFailures++;
                     Debug.LogError($"[UnityMCP] Failed to start on port {Port} (attempt {_startFailures}): {ex.Message}. Change port in Window > Unity MCP.");
                 }
@@ -124,20 +130,64 @@ namespace UnityMCP.Editor
 
         public static void Stop()
         {
-            lock (StateLock)
-            {
-                _userStopped = true;
-                try { _listener?.Stop(); } catch { /* already stopped */ }
-                _listener = null;
-            }
+            lock (StateLock) { _userStopped = true; StopListenerLocked(); }
+        }
+
+        private static void StopListenerLocked()
+        {
+            try { _listener?.Stop(); } catch { /* already stopped */ }
+            try { _listener?.Close(); } catch { /* ignore */ }
+            _listener = null;
+            ClearPortFile();
         }
 
         public static void Restart()
         {
-            _userStopped = false;
-            try { _listener?.Stop(); } catch { /* already stopped */ }
-            _listener = null;
+            lock (StateLock) { _userStopped = false; StopListenerLocked(); }
             Start();
+        }
+
+        // Many ports, not one: try the preferred port, then scan upward.
+        private static int ResolvePort()
+        {
+            int preferred = Port;
+            for (int p = preferred; p < preferred + 100; p++)
+            {
+                var probe = new HttpListener();
+                try
+                {
+                    probe.Prefixes.Add($"http://127.0.0.1:{p}/rpc/");
+                    probe.Start();
+                    probe.Stop();
+                    probe.Close();
+                    return p;
+                }
+                catch (HttpListenerException) { /* busy, try next */ }
+                finally { try { probe.Close(); } catch { /* ignore */ } }
+            }
+            throw new InvalidOperationException(
+                $"No free port in {preferred}..{preferred + 99}. Close duplicate Unity Editors and retry.");
+        }
+
+        private static void WritePortFile(int port)
+        {
+            try
+            {
+                string projectRoot = Directory.GetParent(Application.dataPath)?.FullName ?? Application.dataPath;
+                File.WriteAllText(PortFilePath,
+                    JsonConvert.SerializeObject(new Dictionary<string, object>
+                    {
+                        ["port"] = port,
+                        ["project"] = projectRoot,
+                        ["bridgeVersion"] = Version,
+                    }));
+            }
+            catch (Exception ex) { Debug.LogWarning($"[UnityMCP] Could not write port file: {ex.Message}"); }
+        }
+
+        private static void ClearPortFile()
+        {
+            try { if (File.Exists(PortFilePath)) File.Delete(PortFilePath); } catch { /* ignore */ }
         }
 
         private static void ListenLoop()

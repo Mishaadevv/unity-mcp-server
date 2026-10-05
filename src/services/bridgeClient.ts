@@ -2,7 +2,7 @@
  * Single HTTP client for the Unity Editor C# bridge.
  * All tools must go through this — never duplicate fetch logic.
  */
-import { BRIDGE_TIMEOUT_MS, BRIDGE_URL } from "../constants.js";
+import { BRIDGE_TIMEOUT_MS, bridgeUrl } from "../constants.js";
 import type { BridgeRpcResponse } from "../types.js";
 import { BridgeRpcError } from "./errors.js";
 
@@ -62,7 +62,7 @@ export async function makeBridgeRequest<T>(
 
   let res: Response;
   try {
-    res = await fetch(BRIDGE_URL, {
+    res = await fetch(bridgeUrl(), {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body,

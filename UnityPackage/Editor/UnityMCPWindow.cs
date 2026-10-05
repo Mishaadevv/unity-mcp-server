@@ -17,7 +17,7 @@ namespace UnityMCP.Editor
             GUILayout.Label("Unity MCP Bridge", EditorStyles.boldLabel);
             GUILayout.Label(
                 UnityMCPBridge.IsRunning
-                    ? $"Status: Running on 127.0.0.1:{UnityMCPBridge.Port}"
+                    ? $"Status: Running on 127.0.0.1:{UnityMCPBridge.ActivePort}"
                     : "Status: Stopped",
                 EditorStyles.helpBox);
 
@@ -56,7 +56,7 @@ namespace UnityMCP.Editor
                 "      \"command\": \"node\",\n" +
                 $"      \"args\": [\"<path-to>/Unity-MCP/dist/index.js\"],\n" +
                 "      \"env\": {\n" +
-                $"        \"UNITY_BRIDGE_PORT\": \"{UnityMCPBridge.Port}\"\n" +
+                $"        \"UNITY_BRIDGE_PORT\": \"{(UnityMCPBridge.ActivePort > 0 ? UnityMCPBridge.ActivePort : UnityMCPBridge.Port)}\"\n" +
                 "      }\n" +
                 "    }\n" +
                 "  }\n" +

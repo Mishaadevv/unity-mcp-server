@@ -139,7 +139,7 @@ All mutations go through Unity `Undo` — revert with `Ctrl+Z` in the Editor. Di
 | Var | Default | Description |
 |---|---|---|
 | `UNITY_BRIDGE_HOST` | `127.0.0.1` | Bridge host (keep loopback) |
-| `UNITY_BRIDGE_PORT` | `6400` | Must match Editor window port |
+| `UNITY_BRIDGE_PORT` | auto | Preferred port. If busy, the bridge scans upward (up to +100) and writes the actual port to `%TEMP%/unity-mcp-bridge.port`, which the server reads automatically. Set the env var explicitly to pin a port (required for multi-instance). |
 
 ## Development
 
