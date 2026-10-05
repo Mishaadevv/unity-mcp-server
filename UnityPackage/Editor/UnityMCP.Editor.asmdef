@@ -1,0 +1,13 @@
+{
+  "name": "UnityMCP.Editor",
+  "rootNamespace": "UnityMCP.Editor",
+  "references": ["Newtonsoft.Json"],
+  "includePlatforms": ["Editor"],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

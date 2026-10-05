@@ -1,0 +1,10 @@
+{
+  "name": "com.local.unity-mcp",
+  "displayName": "Unity MCP Bridge",
+  "version": "0.1.0",
+  "unity": "6000.0",
+  "description": "Local HTTP bridge exposing Unity 6 Editor state to unity-mcp-server (scene, GameObjects, components, console, play-mode). Listens on 127.0.0.1 only.",
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.1"
+  }
+}

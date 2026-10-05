@@ -1,0 +1,44 @@
+<evaluation>
+  <!-- Read-only, stable-structure questions for the Unity 6 MVP bridge.
+       All assume a fixture scene; answers are single verifiable values. -->
+  <qa_pair>
+    <question>Ping the Unity bridge and report only the bridge version string in X.Y.Z format.</question>
+    <answer>0.1.0</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>What is the name of the currently active scene? Return just the scene name without path or extension.</question>
+    <answer>MainScene</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>List the first page of the scene hierarchy with defaults. How many root objects are there in total? Return just the number.</question>
+    <answer>8</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Find all GameObjects whose name contains 'Enemy' (case-insensitive). How many are there? Return just the number.</question>
+    <answer>3</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>What is the full hierarchy path of the GameObject tagged 'Player'? Return just the path.</question>
+    <answer>Level/Player</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Which component type on 'Level/Player' controls its physics body? Return just the component type name.</question>
+    <answer>Rigidbody</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>What is the current play-mode state of the Editor? Respond with exactly one of: stopped, playing, paused.</question>
+    <answer>stopped</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Read the console filtered to errors only. What is the first word of the most recent error message? Return just that word.</question>
+    <answer>NullReferenceException</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Among root objects, which one has the most children? Return just its name.</question>
+    <answer>Level</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Is the active scene currently dirty (unsaved changes)? Respond True or False.</question>
+    <answer>False</answer>
+  </qa_pair>
+</evaluation>
